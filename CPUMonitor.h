@@ -21,12 +21,12 @@ namespace Cesame::Server {
 
 class CPUMonitor {
 public: // Methods
-    CPUMonitor(boost::interprocess::managed_shared_memory* shm);
+    CPUMonitor(boost::interprocess::managed_shared_memory* inShm);
     void update();
 
 private: // Variables to store monitoring data
-    // TODO: remove average variables, the parser/client will be in charge of computing them.
     std::vector<double> usagePerCore;
+    double usageAverage;
     unsigned int coreCount;
 
     std::vector<double> temperaturePerCore;
@@ -45,12 +45,15 @@ private: // Methods
     void updatePower();
     void updateClockSpeeds();
 
-    void constructShm(boost::interprocess::managed_shared_memory* shm);
+    void constructShm();
     void updateShm();
 
 private: // Pointers to managed shared memory segments
+    boost::interprocess::managed_shared_memory* shm;
+
     std::vector<double>* shmUsagePerCore;
-    unsigned int* shmCoreCount;
+    double* shmUsageAverage;
+    int* shmCoreCount;
 
     std::vector<double>* shmTemperaturePerCore;
     double* shmTemperaturePackage;

@@ -1,11 +1,14 @@
 #include "GPUMonitor.h"
+#include "common.h"
 
 #include <iostream>
 #include <nvml.h>
 
 using namespace Cesame::Server;
 
-GPUMonitor::GPUMonitor(int deviceIndex) {
+GPUMonitor::GPUMonitor(boost::interprocess::managed_shared_memory* inShm, int deviceIndex) {
+    shm = inShm;
+
     nvmlReturn_t nvmlReturn;
     unsigned int deviceCount;
 
@@ -23,6 +26,8 @@ GPUMonitor::GPUMonitor(int deviceIndex) {
     if(nvmlReturn != NVML_SUCCESS) {
         throw new GPUMonitor::NVMLGetHandleException;
     }
+
+    constructShm();
 }
 
 unsigned int GPUMonitor::getUsage()
@@ -63,7 +68,7 @@ unsigned int GPUMonitor::getPower()
     nvmlReturn = nvmlDeviceGetPowerUsage(device, power);
 
     if(nvmlReturn == NVML_SUCCESS) {
-        return *power;
+        return *power * 1000; // NVML returns a value in milliwatts, we convert it to watts.
     }
     else {
         throw(new PowerQueryException);
@@ -90,9 +95,9 @@ unsigned int GPUMonitor::getClockSpeed(nvmlClockType_t clockType)
 unsigned long long GPUMonitor::getVRAMTotal()
 {
     nvmlReturn_t nvmlReturn;
-    nvmlMemory_v2_t* memory = new nvmlMemory_v2_t;
+    nvmlMemory_t* memory = new nvmlMemory_t;
 
-    nvmlReturn = nvmlDeviceGetMemoryInfo_v2(device, memory);
+    nvmlReturn = nvmlDeviceGetMemoryInfo(device, memory);
 
     if(nvmlReturn == NVML_SUCCESS) {
         return memory->total;
@@ -105,9 +110,9 @@ unsigned long long GPUMonitor::getVRAMTotal()
 unsigned long long GPUMonitor::getVRAMUsed()
 {
     nvmlReturn_t nvmlReturn;
-    nvmlMemory_v2_t* memory = new nvmlMemory_v2_t;
+    nvmlMemory_t* memory = new nvmlMemory_t;
 
-    nvmlReturn = nvmlDeviceGetMemoryInfo_v2(device, memory);
+    nvmlReturn = nvmlDeviceGetMemoryInfo(device, memory);
 
     if(nvmlReturn == NVML_SUCCESS) {
         return memory->used;
@@ -120,9 +125,9 @@ unsigned long long GPUMonitor::getVRAMUsed()
 unsigned long long GPUMonitor::getVRAMFree()
 {
     nvmlReturn_t nvmlReturn;
-    nvmlMemory_v2_t* memory = new nvmlMemory_v2_t;
+    nvmlMemory_t* memory = new nvmlMemory_t;
 
-    nvmlReturn = nvmlDeviceGetMemoryInfo_v2(device, memory);
+    nvmlReturn = nvmlDeviceGetMemoryInfo(device, memory);
 
     if(nvmlReturn == NVML_SUCCESS) {
         return memory->free;
@@ -132,20 +137,24 @@ unsigned long long GPUMonitor::getVRAMFree()
     }
 }
 
-void GPUMonitor::constructShm(boost::interprocess::managed_shared_memory* shm)
+void GPUMonitor::constructShm()
 {
-    shmUsage = shm->construct<unsigned int>("GPUUsage")(getUsage());
-    shmTemperature = shm->construct<unsigned int>("GPUTemperature")(getTemperature());
-    shmPower = shm->construct<unsigned int>("GPUPower")(getPower());
-    shmClockSpeed = shm->construct<unsigned int>("GPUClockSpeed")(getClockSpeed(NVML_CLOCK_GRAPHICS));
+    shmUsage = shm->construct<double>(GPUUsageKey)(getUsage());
+    shmTemperature = shm->construct<double>(GPUTemperatureKey)(getTemperature());
+    shmPower = shm->construct<double>(GPUPowerKey)(getPower());
+    shmClockSpeed = shm->construct<double>(GPUClockSpeedKey)(getClockSpeed(NVML_CLOCK_GRAPHICS));
 
-    shmVRAMTotal = shm->construct<unsigned long long>("GPUVRAMTotal")(getVRAMTotal());
-    shmVRAMUsed = shm->construct<unsigned long long>("GPUVRAMUsed")(getVRAMUsed());
-    shmVRAMFree = shm->construct<unsigned long long>("GPUVRAMFree")(getVRAMFree());
+    shmVRAMTotal = shm->construct<unsigned long long>(GPUVRAMTotalKey)(getVRAMTotal());
+    shmVRAMUsed = shm->construct<unsigned long long>(GPUVRAMUsedKey)(getVRAMUsed());
+    shmVRAMFree = shm->construct<unsigned long long>(GPUVRAMFreeKey)(getVRAMFree());
 }
 
-void GPUMonitor::updateShm()
-{
+// This is just a wrapper to make all monitors use the same syntax
+void GPUMonitor::update() {
+    updateShm();
+}
+
+void GPUMonitor::updateShm() {
     *shmUsage = getUsage();
     *shmTemperature = getTemperature();
     *shmPower = getPower();

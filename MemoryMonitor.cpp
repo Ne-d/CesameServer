@@ -1,10 +1,13 @@
 #include "MemoryMonitor.h"
+#include "common.h"
+
 #include <iostream>
 
 using namespace Cesame::Server;
 
-MemoryMonitor::MemoryMonitor(boost::interprocess::managed_shared_memory* shm)
-{
+MemoryMonitor::MemoryMonitor(boost::interprocess::managed_shared_memory* inShm) {
+    shm = inShm;
+
     // Initialize file streams
     infoStream.open(infoFile);
 
@@ -12,7 +15,7 @@ MemoryMonitor::MemoryMonitor(boost::interprocess::managed_shared_memory* shm)
         std::cerr << "ERROR in memoryMonitor::memoryMonitor(): could not open /proc/meminfo." << std::endl;
     }
 
-    constructShm(shm);
+    constructShm();
 }
 
 
@@ -23,17 +26,17 @@ void MemoryMonitor::update() {
     // Get Total Memory information
     getline(infoStream, line);
     line = trimLine(line);
-    total = stoi(line);
+    total = stoi(line) * conversionFactor;
 
     // Get Free Memory information
     getline(infoStream, line);
     line = trimLine(line);
-    free = stoi(line);
+    free = stoi(line) * conversionFactor;
 
     // Get Available Memory information
     getline(infoStream, line);
     line = trimLine(line);
-    available = stoi(line);
+    available = stoi(line) * conversionFactor;
 
     // Calculate used memory
     used = total - available;
@@ -42,11 +45,11 @@ void MemoryMonitor::update() {
 }
 
 
-void MemoryMonitor::constructShm(boost::interprocess::managed_shared_memory* shm) {
-    shmTotal = shm->construct<unsigned int>("MemoryTotal")(total);
-    shmFree = shm->construct<unsigned int>("MemoryFree")(free);
-    shmAvailable = shm->construct<unsigned int>("MemoryAvailable")(available);
-    shmUsed = shm->construct<unsigned int>("MemoryUsed")(used);
+void MemoryMonitor::constructShm() {
+    shmTotal = shm->construct<unsigned int>(MemoryTotalKey)(total);
+    shmFree = shm->construct<unsigned int>(MemoryFreeKey)(free);
+    shmAvailable = shm->construct<unsigned int>(MemoryAvailableKey)(available);
+    shmUsed = shm->construct<unsigned int>(MemoryUsedKey)(used);
 }
 
 

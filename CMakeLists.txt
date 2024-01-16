@@ -8,7 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(CesameServer main.cpp
     CPUMonitor.h CPUMonitor.cpp
     GPUMonitor.h GPUMonitor.cpp
-    MemoryMonitor.h MemoryMonitor.cpp)
+    MemoryMonitor.h MemoryMonitor.cpp
+    common.h)
 
 add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 

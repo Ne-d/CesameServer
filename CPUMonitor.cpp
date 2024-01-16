@@ -1,4 +1,5 @@
 #include "CPUMonitor.h"
+#include "common.h"
 
 #include <iostream>
 #include <math.h>
@@ -10,7 +11,7 @@
 namespace Cesame::Server {
 
 
-CPUMonitor::CPUMonitor(boost::interprocess::managed_shared_memory* shm)
+CPUMonitor::CPUMonitor(boost::interprocess::managed_shared_memory* inShm)
 {
     // Initialization of timings
     timePointCurrent = std::chrono::steady_clock::now();
@@ -67,7 +68,9 @@ CPUMonitor::CPUMonitor(boost::interprocess::managed_shared_memory* shm)
     energyUnitAdjusted = pow(0.5, (double)(energyUnit));
     powerUnitAdjusted = pow(0.5, (double)(powerUnit));
 
-    constructShm(shm);
+    // Shared memory
+    shm = inShm;
+    constructShm();
 
     update();
 }
@@ -114,11 +117,18 @@ void CPUMonitor::updateUsage() {
         }
     }
 
-    // Update variables to store all monitoring data
+    // Update variables to store all monitoring data (in percent)
     for(unsigned int i = 0; i < coreCount; i++) {
         usagePerCore.at(i) = (((double)activeTime.at(i) - (double)prevActiveTime.at(i)) /
                               ((double)totalTime.at(i) - (double)prevTotalTime.at(i))) * 100.0;
     }
+
+    // Calculate average
+    double sum = 0;
+    for(unsigned int i = 0; i < coreCount; i++) {
+        sum += usagePerCore.at(i);
+    }
+    usageAverage = sum / coreCount;
 }
 
 void CPUMonitor::updateTemperature() {
@@ -276,24 +286,25 @@ void CPUMonitor::updateEnergy()
     }
 }
 
-using namespace boost::interprocess;
-void CPUMonitor::constructShm(boost::interprocess::managed_shared_memory* shm) {
-    shmUsagePerCore = shm->construct<std::vector<double>>("CPUUsagePerCore")(usagePerCore);
-    shmCoreCount = shm->construct<unsigned int>("CPUCoreCount")(coreCount);
+void CPUMonitor::constructShm() {
+    shmUsagePerCore = shm->construct<std::vector<double>>(CPUUsageCoreKey)(usagePerCore);
+    shmUsageAverage = shm->construct<double>(CPUUsageAverageKey)(usageAverage);
+    shmCoreCount = shm->construct<int>(CPUCoreCountKey)(coreCount);
 
-    shmTemperaturePerCore = shm->construct<std::vector<double>>("CPUTemperaturePerCore")(temperaturePerCore);
-    shmTemperaturePackage = shm->construct<double>("CPUTemperaturePackage")(temperaturePackage);
+    shmTemperaturePerCore = shm->construct<std::vector<double>>(CPUTemperaturePerCoreKey)(temperaturePerCore);
+    shmTemperaturePackage = shm->construct<double>(CPUTemperaturePackagekey)(temperaturePackage);
 
-    shmPowerPerCore = shm->construct<std::vector<double>>("CPUPowerPerCore")(powerPerCore);
-    shmPowerPackage = shm->construct<double>("CPUPowerPackage")(powerPackage);
+    shmPowerPerCore = shm->construct<std::vector<double>>(CPUPowerPerCoreKey)(powerPerCore);
+    shmPowerPackage = shm->construct<double>(CPUPowerPackageKey)(powerPackage);
 
-    shmClockSpeedPerCore = shm->construct<std::vector<double>>("CPUClockSpeedPerCore")(clockSpeedPerCore);
-    shmClockSpeedAverage = shm->construct<double>("CPUClockSpeedAverage")(clockSpeedAverage);
+    shmClockSpeedPerCore = shm->construct<std::vector<double>>(CPUClockSpeedCoreKey)(clockSpeedPerCore);
+    shmClockSpeedAverage = shm->construct<double>(CPUClockSpeedAverageKey)(clockSpeedAverage);
 }
 
 void CPUMonitor::updateShm()
 {
     *shmUsagePerCore = usagePerCore;
+    *shmUsageAverage = usageAverage;
     // CoreCount should not change at runtime after its initialization.
     // Cause I don't think you're gonna be hotswapping your CPU mate.
 
