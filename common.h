@@ -60,7 +60,7 @@ typedef struct packet_t {
     unsigned int        MemoryUsed;
     unsigned int        MemoryFree;
     unsigned int        MemoryAvailable;
-} packet;
+} MonitorPacket;
 
 
 #endif // COMMON_H

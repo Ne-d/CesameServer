@@ -17,10 +17,9 @@ private:
     double VRAMDivisionFactor = 1000*1000*1000;
 
 public: // Methods
-    GPUMonitor(boost::interprocess::managed_shared_memory *shm, int deviceIndex);
+    GPUMonitor(int deviceIndex);
 
-    void constructShm();
-    void updateShm();
+    void updatePacket();
     void update();
 
     // Main queries
@@ -92,18 +91,6 @@ public: // Monitoring variables
     double VRAMTotal = -1;
     double VRAMUsed = -1;
     double VRAMFree = -1;
-
-private: // Shared Memory Pointers
-    boost::interprocess::managed_shared_memory* shm;
-
-    double* shmUsage;
-    double* shmTemperature;
-    double* shmPower;
-    double* shmClockSpeed;
-
-    unsigned long long* shmVRAMTotal;
-    unsigned long long* shmVRAMUsed;
-    unsigned long long* shmVRAMFree;
 
 
 public: // Exceptions

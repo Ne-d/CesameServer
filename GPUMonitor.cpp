@@ -1,14 +1,12 @@
 #include "GPUMonitor.h"
-#include "common.h"
+#include "Network.h"
 
 #include <iostream>
 #include <nvml.h>
 
 using namespace Cesame::Server;
 
-GPUMonitor::GPUMonitor(boost::interprocess::managed_shared_memory* inShm, int deviceIndex) {
-    shm = inShm;
-
+GPUMonitor::GPUMonitor(int deviceIndex) {
     nvmlReturn_t nvmlReturn;
     unsigned int deviceCount;
 
@@ -26,8 +24,6 @@ GPUMonitor::GPUMonitor(boost::interprocess::managed_shared_memory* inShm, int de
     if(nvmlReturn != NVML_SUCCESS) {
         throw new GPUMonitor::NVMLGetHandleException;
     }
-
-    constructShm();
 }
 
 unsigned int GPUMonitor::getUsage()
@@ -137,30 +133,17 @@ unsigned long long GPUMonitor::getVRAMFree()
     }
 }
 
-void GPUMonitor::constructShm()
-{
-    shmUsage = shm->construct<double>(GPUUsageKey)(getUsage());
-    shmTemperature = shm->construct<double>(GPUTemperatureKey)(getTemperature());
-    shmPower = shm->construct<double>(GPUPowerKey)(getPower());
-    shmClockSpeed = shm->construct<double>(GPUClockSpeedKey)(getClockSpeed(NVML_CLOCK_GRAPHICS));
-
-    shmVRAMTotal = shm->construct<unsigned long long>(GPUVRAMTotalKey)(getVRAMTotal());
-    shmVRAMUsed = shm->construct<unsigned long long>(GPUVRAMUsedKey)(getVRAMUsed());
-    shmVRAMFree = shm->construct<unsigned long long>(GPUVRAMFreeKey)(getVRAMFree());
-}
-
 // This is just a wrapper to make all monitors use the same syntax
 void GPUMonitor::update() {
-    updateShm();
+    updatePacket();
 }
 
-void GPUMonitor::updateShm() {
-    *shmUsage = getUsage();
-    *shmTemperature = getTemperature();
-    *shmPower = getPower();
-    *shmClockSpeed = getClockSpeed(NVML_CLOCK_GRAPHICS);
-
-    *shmVRAMTotal = getVRAMTotal();
-    *shmVRAMUsed = getVRAMUsed();
-    *shmVRAMFree = getVRAMFree();
+void GPUMonitor::updatePacket() {
+    Network::getPacket()->GPUUsage = getUsage();
+    Network::getPacket()->GPUTemperature = getTemperature();
+    Network::getPacket()->GPUPower = getPower();
+    Network::getPacket()->GPUClockSpeed = getClockSpeed(NVML_CLOCK_GRAPHICS);
+    Network::getPacket()->GPUVRAMTotal = getVRAMTotal();
+    Network::getPacket()->GPUVRAMUsed = getVRAMUsed();
+    Network::getPacket()->GPUVRAMFree = getVRAMFree();
 }

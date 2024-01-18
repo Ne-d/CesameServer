@@ -1,21 +1,17 @@
 #include "MemoryMonitor.h"
-#include "common.h"
+#include "Network.h"
 
 #include <iostream>
 
 using namespace Cesame::Server;
 
-MemoryMonitor::MemoryMonitor(boost::interprocess::managed_shared_memory* inShm) {
-    shm = inShm;
-
+MemoryMonitor::MemoryMonitor() {
     // Initialize file streams
     infoStream.open(infoFile);
 
     if(!infoStream.is_open()) {
         std::cerr << "ERROR in memoryMonitor::memoryMonitor(): could not open /proc/meminfo." << std::endl;
     }
-
-    constructShm();
 }
 
 
@@ -41,23 +37,15 @@ void MemoryMonitor::update() {
     // Calculate used memory
     used = total - available;
 
-    updateShm();
+    updatePacket();
 }
 
 
-void MemoryMonitor::constructShm() {
-    shmTotal = shm->construct<unsigned int>(MemoryTotalKey)(total);
-    shmFree = shm->construct<unsigned int>(MemoryFreeKey)(free);
-    shmAvailable = shm->construct<unsigned int>(MemoryAvailableKey)(available);
-    shmUsed = shm->construct<unsigned int>(MemoryUsedKey)(used);
-}
-
-
-void MemoryMonitor::updateShm() {
-    *shmTotal = total;
-    *shmFree = free;
-    *shmAvailable = available;
-    *shmUsed = used;
+void MemoryMonitor::updatePacket() {
+    Network::getPacket()->MemoryTotal = total;
+    Network::getPacket()->MemoryFree = free;
+    Network::getPacket()->MemoryAvailable = available;
+    Network::getPacket()->MemoryUsed = used;
 }
 
 

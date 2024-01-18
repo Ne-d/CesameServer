@@ -1,5 +1,6 @@
 #include "CPUMonitor.h"
 #include "common.h"
+#include "Network.h"
 
 #include <iostream>
 #include <math.h>
@@ -11,7 +12,7 @@
 namespace Cesame::Server {
 
 
-CPUMonitor::CPUMonitor(boost::interprocess::managed_shared_memory* inShm)
+CPUMonitor::CPUMonitor()
 {
     // Initialization of timings
     timePointCurrent = std::chrono::steady_clock::now();
@@ -34,6 +35,7 @@ CPUMonitor::CPUMonitor(boost::interprocess::managed_shared_memory* inShm)
 
     // Preparation of data vectors (arrays).
     coreCount = 16; // TODO: Read the "siblings" value from infoFile to adapt to any CPU, or smth else idk man
+    Network::getPacket()->CPUCoreCount = coreCount;
 
     fields.resize(coreCount + 1);
     totalTime.resize(coreCount + 1, 0);
@@ -67,10 +69,6 @@ CPUMonitor::CPUMonitor(boost::interprocess::managed_shared_memory* inShm)
     timeUnitAdjusted = pow(0.5, (double)(timeUnit));
     energyUnitAdjusted = pow(0.5, (double)(energyUnit));
     powerUnitAdjusted = pow(0.5, (double)(powerUnit));
-
-    // Shared memory
-    shm = inShm;
-    constructShm();
 
     update();
 }
@@ -181,7 +179,7 @@ void CPUMonitor::update() {
     updatePower();
     updateClockSpeeds();
 
-    updateShm();
+    updatePacket();
 }
 
 void CPUMonitor::detectPackages()
@@ -286,36 +284,21 @@ void CPUMonitor::updateEnergy()
     }
 }
 
-void CPUMonitor::constructShm() {
-    shmUsagePerCore = shm->construct<std::vector<double>>(CPUUsageCoreKey)(usagePerCore);
-    shmUsageAverage = shm->construct<double>(CPUUsageAverageKey)(usageAverage);
-    shmCoreCount = shm->construct<int>(CPUCoreCountKey)(coreCount);
-
-    shmTemperaturePerCore = shm->construct<std::vector<double>>(CPUTemperaturePerCoreKey)(temperaturePerCore);
-    shmTemperaturePackage = shm->construct<double>(CPUTemperaturePackagekey)(temperaturePackage);
-
-    shmPowerPerCore = shm->construct<std::vector<double>>(CPUPowerPerCoreKey)(powerPerCore);
-    shmPowerPackage = shm->construct<double>(CPUPowerPackageKey)(powerPackage);
-
-    shmClockSpeedPerCore = shm->construct<std::vector<double>>(CPUClockSpeedCoreKey)(clockSpeedPerCore);
-    shmClockSpeedAverage = shm->construct<double>(CPUClockSpeedAverageKey)(clockSpeedAverage);
-}
-
-void CPUMonitor::updateShm()
+void CPUMonitor::updatePacket()
 {
-    *shmUsagePerCore = usagePerCore;
-    *shmUsageAverage = usageAverage;
+    Network::getPacket()->CPUUsagePerCore = usagePerCore;
+    Network::getPacket()->CPUUsageAverage = usageAverage;
     // CoreCount should not change at runtime after its initialization.
     // Cause I don't think you're gonna be hotswapping your CPU mate.
 
-    *shmTemperaturePerCore = temperaturePerCore;
-    *shmTemperaturePackage = temperaturePackage;
+    Network::getPacket()->CPUTemperaturePerCore = temperaturePerCore;
+    Network::getPacket()->CPUTemperaturePackage = temperaturePackage;
 
-    *shmPowerPerCore = powerPerCore;
-    *shmPowerPackage = powerPackage;
+    Network::getPacket()->CPUPowerPerCore = powerPerCore;
+    Network::getPacket()->CPUPowerPackage = powerPackage;
 
-    *shmClockSpeedPerCore = clockSpeedPerCore;
-    *shmClockSpeedAverage = clockSpeedAverage;
+    Network::getPacket()->CPUClockSpeedPerCore = clockSpeedPerCore;
+    Network::getPacket()->CPUClockSpeedAverage = clockSpeedAverage;
 }
 
 } // namespace Cesame::Server

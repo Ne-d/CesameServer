@@ -21,7 +21,7 @@ namespace Cesame::Server {
 
 class CPUMonitor {
 public: // Methods
-    CPUMonitor(boost::interprocess::managed_shared_memory* inShm);
+    CPUMonitor();
     void update();
 
 private: // Variables to store monitoring data
@@ -45,26 +45,7 @@ private: // Methods
     void updatePower();
     void updateClockSpeeds();
 
-    void constructShm();
-    void updateShm();
-
-private: // Pointers to managed shared memory segments
-    boost::interprocess::managed_shared_memory* shm;
-
-    std::vector<double>* shmUsagePerCore;
-    double* shmUsageAverage;
-    int* shmCoreCount;
-
-    std::vector<double>* shmTemperaturePerCore;
-    double* shmTemperaturePackage;
-
-    std::vector<double>* shmPowerPerCore;
-    double* shmPowerPackage;
-
-    std::vector<double>* shmClockSpeedPerCore;
-    double* shmClockSpeedAverage;
-
-
+    void updatePacket();
 
 private:
     // Timings
@@ -122,7 +103,6 @@ private: // MSR / RAPL
     void detectPackages();
     long long readMsr(int core, unsigned int reg);
     void updateEnergy();
-
 
 public: // Exceptions
     class MSRNoCpuException : public std::exception {

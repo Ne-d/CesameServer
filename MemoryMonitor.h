@@ -22,20 +22,11 @@ private: // Member Variables
     // Others
     unsigned int conversionFactor = 1000;
 
-private: // Shared Memory Pointers
-    boost::interprocess::managed_shared_memory* shm;
-
-    unsigned int* shmTotal;
-    unsigned int* shmFree;
-    unsigned int* shmAvailable;
-    unsigned int* shmUsed;
-
 public: // Methods
-    MemoryMonitor(boost::interprocess::managed_shared_memory* inShm);
+    MemoryMonitor();
 
     void update();
-    void constructShm();
-    void updateShm();
+    void updatePacket();
 
     std::string trimLine(std::string line);
 

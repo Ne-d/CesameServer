@@ -13,6 +13,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "common.h"
+
 using namespace boost::interprocess;
 
 void cleanup() {
@@ -61,9 +63,10 @@ int main()
     assert(new_socket != -1);
     std::cout << "accept done" << std::endl;
 
-    std::string str = "Hello there!";
-    const char* buffer = str.c_str();
-    size_t size = strlen(buffer) * sizeof(char);
+    MonitorPacket buffer;
+    buffer.CPUCoreCount = 42;
+    size_t size = sizeof(MonitorPacket);
+
     res = send(new_socket, &buffer, size, 0);
     assert(res != -1);
     assert(res != 0);
@@ -73,27 +76,17 @@ int main()
     close(new_socket);
     close(sockfd);
 
-    // TODO: Determine optimized size.
-    size_t shmSize = 655360000;
-
     // Delete previous SHM if it exists.
     cleanup();
 
-    // Create unrestricted managed shared memory object.
-    std::cout << "Creating shared memory objects." << std::endl;
-    permissions unrestrictedPermissions;
-    unrestrictedPermissions.set_unrestricted();
-    managed_shared_memory* shm = new managed_shared_memory(create_only, "CesameServer", shmSize, 0, unrestrictedPermissions);
-    std::cout << "Running..." << std::endl;
-    
-    Cesame::Server::CPUMonitor* cpuMon = new Cesame::Server::CPUMonitor(shm);
-    Cesame::Server::GPUMonitor* gpuMon = new Cesame::Server::GPUMonitor(shm, 0);
-    Cesame::Server::MemoryMonitor* memoryMon = new Cesame::Server::MemoryMonitor(shm);
+    Cesame::Server::CPUMonitor* cpuMon = new Cesame::Server::CPUMonitor();
+    Cesame::Server::GPUMonitor* gpuMon = new Cesame::Server::GPUMonitor(0);
+    Cesame::Server::MemoryMonitor* memoryMon = new Cesame::Server::MemoryMonitor();
 
     // Inifinite loop, the program will use signals to exit.
     while(true) {
         cpuMon->update();
-        gpuMon->updateShm();
+        gpuMon->update();
         memoryMon->update();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }

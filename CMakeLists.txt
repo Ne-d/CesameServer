@@ -9,7 +9,8 @@ add_executable(CesameServer main.cpp
     CPUMonitor.h CPUMonitor.cpp
     GPUMonitor.h GPUMonitor.cpp
     MemoryMonitor.h MemoryMonitor.cpp
-    common.h)
+    common.h
+    Network.h Network.cpp)
 
 add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 
