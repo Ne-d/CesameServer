@@ -8,6 +8,9 @@ namespace Server {
 namespace Network {
 
 MonitorPacket* getPacket();
+void init();
+void socketClose();
+void sendPacket();
 
 } // namespace Network
 } // namespace Server
